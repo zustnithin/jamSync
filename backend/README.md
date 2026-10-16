@@ -22,6 +22,16 @@ Server runs on `http://localhost:5000` (or `PORT` from `.env`).
 | POST   | `/api/signup` | `{ username, password }` | `201`          |
 | POST   | `/api/login`  | `{ username, password }` | `200`          |
 
+## Friends endpoints
+
+| Method | Path                     | Params / Body                          | Notes                                        |
+| ------ | ------------------------ | -------------------------------------- | -------------------------------------------- |
+| GET    | `/api/users/search`      | `?q=&me=`                              | Prefix search, excludes self + demo account  |
+| POST   | `/api/friends/request`   | `{ from, to }`                         | Auto-accepts if they already requested you   |
+| GET    | `/api/friends/requests`  | `?user=`                               | Incoming pending requests                    |
+| POST   | `/api/friends/respond`   | `{ user, from, accept }`               | Accept creates a two-way friendship          |
+| GET    | `/api/friends`           | `?user=`                               | Your friends list                            |
+
 - Usernames: min 3 chars, letters/numbers/underscores only, case-insensitive unique.
 - `nithin` is reserved for the offline demo account.
 - Passwords stored as bcrypt hashes, never plain text.

@@ -1,8 +1,14 @@
 /* =============================================
    JAMSYNC — Instruments Dashboard JavaScript
    Handles: Profile dropdown, logout modal,
-   instrument card click, username display
+   instrument card click, username display,
+   friends (find / requests / list)
 ============================================= */
+
+const FRIEND_API = 'http://localhost:5000/api';
+
+const me = () => localStorage.getItem('jamsync_user') || '';
+const avatarOf = (name) => (name.charAt(0) || 'M').toUpperCase();
 
 
 // ─── ON PAGE LOAD ─────────────────────────────
@@ -21,6 +27,11 @@ window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('avatar-circle').textContent   = initial;
   document.getElementById('avatar-lg').textContent       = initial;
   document.getElementById('dropdown-username').textContent = username;
+
+  // Friends data + badge
+  loadFriends();
+  refreshBadge();
+  setInterval(refreshBadge, 30000); // badge stays fresh
 });
 
 
@@ -168,4 +179,244 @@ function showToast(message) {
   toastTimer = setTimeout(() => {
     toast.classList.add('hidden');
   }, 2500);
+}
+
+
+// ─── FRIENDS ───────────────────────────────────
+// Big box with Find + Requests tabs, plus dashboard friends list.
+// Server: backend/routes/friends.js (MongoDB).
+
+async function friendGet(path) {
+  const res = await fetch(FRIEND_API + path);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Server error');
+  return data;
+}
+
+async function friendPost(path, body) {
+  const res = await fetch(FRIEND_API + path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Server error');
+  return data;
+}
+
+function openFriends(tab = 'find') {
+  document.getElementById('friends-modal').classList.remove('hidden');
+  switchFriendTab(tab);
+  if (tab === 'find') {
+    document.getElementById('find-input').value = '';
+    document.getElementById('find-results').innerHTML =
+      '<p class="pane-hint">Type a username to find musicians 🎤</p>';
+    setTimeout(() => document.getElementById('find-input').focus(), 100);
+  } else {
+    loadRequests();
+  }
+  refreshBadge();
+}
+
+function closeFriends() {
+  document.getElementById('friends-modal').classList.add('hidden');
+}
+
+function switchFriendTab(tab) {
+  const isFind = tab === 'find';
+  document.getElementById('pane-find').classList.toggle('hidden', !isFind);
+  document.getElementById('pane-requests').classList.toggle('hidden', isFind);
+  document.getElementById('ftab-find').classList.toggle('active', isFind);
+  document.getElementById('ftab-requests').classList.toggle('active', !isFind);
+  if (!isFind) loadRequests();
+}
+
+// Close box when clicking the dark background
+document.getElementById('friends-modal').addEventListener('click', function (e) {
+  if (e.target === this) closeFriends();
+});
+
+// ─── FIND: live username search ───
+let searchTimer = null;
+
+function searchUsers() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(runSearch, 300); // wait until typing pauses
+}
+
+async function runSearch() {
+  const q = document.getElementById('find-input').value.trim();
+  const box = document.getElementById('find-results');
+  if (q.length < 1) {
+    box.innerHTML = '<p class="pane-hint">Type a username to find musicians 🎤</p>';
+    return;
+  }
+  box.innerHTML = '<p class="pane-hint">Searching… 🔍</p>';
+  try {
+    const data = await friendGet(`/users/search?q=${encodeURIComponent(q)}&me=${encodeURIComponent(me())}`);
+    if (!data.users.length) {
+      box.innerHTML = '<p class="pane-hint">No user found with that name 😕</p>';
+      return;
+    }
+    box.innerHTML = '';
+    data.users.forEach((u) => box.appendChild(findRow(u)));
+  } catch (err) {
+    box.innerHTML = `<p class="pane-hint">${err.message} 📡</p>`;
+  }
+}
+
+// One search result row: avatar + name + action button (+ → ⏳ → ✓)
+function findRow(u) {
+  const row = document.createElement('div');
+  row.className = 'user-row';
+  row.innerHTML = `<div class="avatar">${avatarOf(u.username)}</div>
+                   <span class="user-name"></span>`;
+  row.querySelector('.user-name').textContent = u.username;
+
+  const btn = document.createElement('button');
+  btn.className = 'add-btn';
+
+  if (u.relation === 'friends') {
+    btn.textContent = '✓';
+    btn.classList.add('done');
+    btn.disabled = true;
+    btn.title = 'Already friends';
+  } else if (u.relation === 'requested') {
+    btn.textContent = '✓';
+    btn.classList.add('sent');
+    btn.disabled = true;
+    btn.title = 'Request sent';
+  } else if (u.relation === 'incoming') {
+    btn.textContent = '📩';
+    btn.title = 'They requested you — check Requests tab';
+    btn.onclick = () => switchFriendTab('requests');
+  } else {
+    btn.textContent = '+';
+    btn.title = 'Send friend request';
+    btn.onclick = () => sendRequest(u.username, btn);
+  }
+
+  row.appendChild(btn);
+  return row;
+}
+
+async function sendRequest(username, btn) {
+  btn.disabled = true;
+  btn.textContent = '⏳';
+  btn.classList.add('loading');
+  try {
+    const data = await friendPost('/friends/request', { from: me(), to: username });
+    btn.classList.remove('loading');
+    btn.textContent = '✓';
+    if (data.status === 'friends') {
+      btn.classList.add('done');
+      btn.title = 'You are now friends! 🎉';
+      showToast(`🎉 You and ${username} are now friends!`);
+      loadFriends();
+    } else {
+      btn.classList.add('sent');
+      btn.title = 'Request sent';
+      showToast(`📩 Request sent to ${username}`);
+    }
+  } catch (err) {
+    btn.disabled = false;
+    btn.classList.remove('loading');
+    btn.textContent = '+';
+    showToast('⚠️ ' + err.message);
+  }
+}
+
+// ─── REQUESTS: incoming list with ✓ / ✕ ───
+async function loadRequests() {
+  const box = document.getElementById('requests-list');
+  box.innerHTML = '<p class="pane-hint">Loading… 📩</p>';
+  try {
+    const data = await friendGet(`/friends/requests?user=${encodeURIComponent(me())}`);
+    if (!data.requests.length) {
+      box.innerHTML = '<p class="pane-hint">No friend requests 📭</p>';
+      return;
+    }
+    box.innerHTML = '';
+    data.requests.forEach((r) => box.appendChild(requestRow(r.from)));
+    refreshBadge();
+  } catch (err) {
+    box.innerHTML = `<p class="pane-hint">${err.message} 📡</p>`;
+  }
+}
+
+function requestRow(username) {
+  const row = document.createElement('div');
+  row.className = 'user-row';
+  row.innerHTML = `<div class="avatar">${avatarOf(username)}</div>
+                   <span class="user-name"></span>
+                   <div class="req-actions">
+                     <button class="accept-btn" title="Accept">✓</button>
+                     <button class="reject-btn" title="Reject">✕</button>
+                   </div>`;
+  row.querySelector('.user-name').textContent = username;
+
+  const [okBtn, noBtn] = row.querySelectorAll('button');
+  okBtn.onclick = () => respondRequest(username, true, row);
+  noBtn.onclick = () => respondRequest(username, false, row);
+  return row;
+}
+
+async function respondRequest(username, accept, row) {
+  row.querySelectorAll('button').forEach((b) => (b.disabled = true));
+  try {
+    await friendPost('/friends/respond', { user: me(), from: username, accept });
+    row.remove();
+    if (accept) {
+      showToast(`🎉 You and ${username} are now friends!`);
+      loadFriends();
+    } else {
+      showToast(`Request from ${username} removed`);
+    }
+    const box = document.getElementById('requests-list');
+    if (!box.children.length) box.innerHTML = '<p class="pane-hint">No friend requests 📭</p>';
+    refreshBadge();
+  } catch (err) {
+    row.querySelectorAll('button').forEach((b) => (b.disabled = false));
+    showToast('⚠️ ' + err.message);
+  }
+}
+
+// ─── BADGE: pending request count on navbar icon ───
+async function refreshBadge() {
+  const badge = document.getElementById('friend-badge');
+  const reqBadge = document.getElementById('req-badge');
+  try {
+    const data = await friendGet(`/friends/requests?user=${encodeURIComponent(me())}`);
+    const n = data.requests.length;
+    badge.textContent = n;
+    badge.classList.toggle('hidden', n === 0);
+    reqBadge.textContent = n;
+    reqBadge.classList.toggle('hidden', n === 0);
+  } catch {
+    badge.classList.add('hidden'); // server offline — hide quietly
+  }
+}
+
+// ─── FRIENDS LIST on dashboard ───
+async function loadFriends() {
+  const grid = document.getElementById('friends-grid');
+  try {
+    const data = await friendGet(`/friends?user=${encodeURIComponent(me())}`);
+    grid.innerHTML = '';
+    if (!data.friends.length) {
+      grid.innerHTML = '<p class="friends-empty" id="friends-empty">No friends yet — tap + Add to find musicians 🎵</p>';
+      return;
+    }
+    data.friends.forEach((f) => {
+      const card = document.createElement('div');
+      card.className = 'friend-card';
+      card.innerHTML = `<div class="avatar-lg">${avatarOf(f.username)}</div>
+                        <span class="friend-card-name"></span>
+                        <span class="friend-card-sub">🟢 Friend</span>`;
+      card.querySelector('.friend-card-name').textContent = f.username;
+      grid.appendChild(card);
+    });
+  } catch {
+    grid.innerHTML = '<p class="friends-empty">Friends need the server online 📡 (start backend with npm start)</p>';
+  }
 }

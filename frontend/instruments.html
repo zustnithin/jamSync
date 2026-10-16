@@ -35,8 +35,12 @@
       <span class="nav-tagline">🎸 Pick your instrument and start jamming</span>
     </div>
 
-    <!-- Profile Icon + Dropdown -->
+    <!-- Friends Icon + Profile Icon + Dropdown -->
     <div class="nav-right">
+      <button class="friend-btn" id="friend-btn" onclick="openFriends('find')" title="Friends">
+        <span class="friend-icon">👥</span>
+        <span class="friend-badge hidden" id="friend-badge">0</span>
+      </button>
       <div class="profile-wrapper" id="profile-wrapper">
         <button class="profile-btn" id="profile-btn" onclick="toggleDropdown()">
           <div class="avatar" id="avatar-circle">N</div>
@@ -212,10 +216,56 @@
 
     </div>
 
+    <!-- My Friends -->
+    <section class="friends-section">
+      <div class="friends-header">
+        <h2 class="friends-title">👥 My Friends</h2>
+        <button class="friends-add-btn" onclick="openFriends('find')">+ Add</button>
+      </div>
+      <div class="friends-grid" id="friends-grid">
+        <p class="friends-empty" id="friends-empty">No friends yet — tap + Add to find musicians 🎵</p>
+      </div>
+    </section>
+
     <!-- Bottom hint -->
     <p class="bottom-hint">💡 Tip: Click any card to open the full instrument studio</p>
 
   </main>
+
+  <!-- Friends Big Box -->
+  <div class="modal-overlay hidden" id="friends-modal">
+    <div class="friends-box">
+      <div class="friends-box-header">
+        <h3 class="friends-box-title">👥 Friends</h3>
+        <button class="friends-close" onclick="closeFriends()" title="Close">✕</button>
+      </div>
+
+      <div class="friends-tabs">
+        <button class="friend-tab active" id="ftab-find" onclick="switchFriendTab('find')">🔍 Find</button>
+        <button class="friend-tab" id="ftab-requests" onclick="switchFriendTab('requests')">
+          📩 Requests <span class="req-badge hidden" id="req-badge">0</span>
+        </button>
+      </div>
+
+      <!-- FIND pane -->
+      <div class="friend-pane" id="pane-find">
+        <div class="find-search">
+          <span class="find-icon">🔍</span>
+          <input type="text" id="find-input" placeholder="Search username…" oninput="searchUsers()" autocomplete="off" />
+        </div>
+        <div class="find-results" id="find-results">
+          <p class="pane-hint">Type a username to find musicians 🎤</p>
+        </div>
+      </div>
+
+      <!-- REQUESTS pane -->
+      <div class="friend-pane hidden" id="pane-requests">
+        <div class="find-results" id="requests-list">
+          <p class="pane-hint">No friend requests 📭</p>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Logout Confirmation Modal -->
   <div class="modal-overlay hidden" id="logout-modal">

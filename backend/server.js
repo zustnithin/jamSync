@@ -91,5 +91,7 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
+app.use('/api', require('./routes/friends'));
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🎵 JamSync API on http://localhost:${PORT}`));
