@@ -1,18 +1,40 @@
 /* =============================================
    JAMSYNC — Login Page JavaScript
-   Login:  username + password (checks localStorage DB + demo account)
+   Login:  username + password (MongoDB API + demo account)
    Signup: username + password + confirm password (no OTP)
-   DB: browser localStorage key "jamsync_users" -> { username: password }
-   Demo account always works: nithin / demo1234
-   NOTE: plain-text storage is for learning only, not production.
+   Primary DB: MongoDB via backend API (http://localhost:5000/api)
+   Fallback: browser localStorage key "jamsync_users" when backend is down
+   Demo account always works offline: nithin / demo1234
 ============================================= */
 
 
-// ─── MINI DATABASE (localStorage) ────────────
+// ─── CONFIG ────────────────────────────────────
+const API_BASE = 'http://localhost:5000/api';
 const USERS_KEY = 'jamsync_users';
 const DEMO_USER = 'nithin';
 const DEMO_PASS = 'demo1234';
 
+// POST JSON to the API with a 5s timeout. Throws on network failure.
+async function apiPost(path, body) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 5000);
+  try {
+    const res = await fetch(API_BASE + path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: ctrl.signal,
+    });
+    const data = await res.json().catch(() => ({}));
+    return { status: res.status, data };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+
+// ─── OFFLINE FALLBACK (localStorage) ───────────
+// Used only when the backend is unreachable, so the app still works.
 function getUsers() {
   try {
     return JSON.parse(localStorage.getItem(USERS_KEY)) || {};
@@ -29,6 +51,36 @@ function findUserKey(users, username) {
   // case-insensitive lookup so "Nithin" and "nithin" don't collide
   const target = username.toLowerCase();
   return Object.keys(users).find((k) => k.toLowerCase() === target) || null;
+}
+
+function mirrorToLocal(username, password) {
+  const users = getUsers();
+  if (!findUserKey(users, username)) {
+    users[username] = password;
+    saveUsers(users);
+  }
+}
+
+function loginSuccess(username, token) {
+  localStorage.setItem('jamsync_user', username);
+  localStorage.setItem('jamsync_token', token);
+  showMsg('login-msg', '✅ Login successful! Redirecting...', 'success');
+  setTimeout(() => {
+    window.location.href = 'instruments.html';
+  }, 1000);
+}
+
+function clearSignupForm() {
+  // Clear signup fields so no details stay in the inputs
+  document.getElementById('signup-username').value = '';
+  document.getElementById('signup-password').value = '';
+  document.getElementById('signup-confirm').value = '';
+  const fill = document.getElementById('strength-fill');
+  const strengthLabel = document.getElementById('strength-label');
+  const matchLabel = document.getElementById('match-label');
+  if (fill) { fill.style.width = '0%'; fill.style.background = 'transparent'; }
+  if (strengthLabel) strengthLabel.textContent = '';
+  if (matchLabel) matchLabel.textContent = '';
 }
 
 
@@ -167,9 +219,9 @@ function setLoading(btnId, isLoading, defaultText) {
 
 // ─── HANDLE LOGIN ─────────────────────────────
 // Login: username + password only
-// Checks: 1) demo account, 2) localStorage user DB
+// Checks: 1) demo account (offline), 2) MongoDB API, 3) localStorage fallback
 
-function handleLogin(event) {
+async function handleLogin(event) {
   event.preventDefault();
 
   const username = document.getElementById('login-username').value.trim();
@@ -189,49 +241,48 @@ function handleLogin(event) {
     return;
   }
 
+  // 1) DEMO account — always kept working, no server needed
+  if (username === DEMO_USER && password === DEMO_PASS) {
+    loginSuccess(username, 'demo-token-123');
+    return;
+  }
+
   setLoading('login-btn', true, 'Login to JamSync');
 
-  setTimeout(() => {
+  try {
+    // 2) MongoDB via backend API
+    const { status, data } = await apiPost('/login', { username, password });
     setLoading('login-btn', false, 'Login to JamSync');
 
-    // 1) DEMO account — always kept working
-    if (username === DEMO_USER && password === DEMO_PASS) {
-      localStorage.setItem('jamsync_user', username);
-      localStorage.setItem('jamsync_token', 'demo-token-123');
-
-      showMsg('login-msg', '✅ Login successful! Redirecting...', 'success');
-      setTimeout(() => {
-        window.location.href = 'instruments.html';
-      }, 1000);
-      return;
+    if (status === 200 && data.ok) {
+      mirrorToLocal(data.username, password); // keep offline login working
+      loginSuccess(data.username, 'mongo-token-' + Date.now());
+    } else {
+      showMsg('login-msg', '❌ ' + (data.error || 'Wrong username or password.'), 'error');
+      shakeCard();
     }
-
-    // 2) Check signed-up users in localStorage DB
+  } catch {
+    // 3) Backend unreachable — fall back to localStorage
+    setLoading('login-btn', false, 'Login to JamSync');
     const users = getUsers();
     const key = findUserKey(users, username);
 
     if (key && users[key] === password) {
       // Keep original casing of stored username for display
-      localStorage.setItem('jamsync_user', key);
-      localStorage.setItem('jamsync_token', 'user-token-' + Date.now());
-
-      showMsg('login-msg', '✅ Login successful! Redirecting...', 'success');
-      setTimeout(() => {
-        window.location.href = 'instruments.html';
-      }, 1000);
+      loginSuccess(key, 'user-token-' + Date.now());
     } else {
-      showMsg('login-msg', '❌ Wrong username or password.', 'error');
+      showMsg('login-msg', '❌ Wrong username or password. (Server offline, checked local accounts)', 'error');
       shakeCard();
     }
-  }, 800);
+  }
 }
 
 
 // ─── HANDLE SIGNUP ────────────────────────────
 // Signup: username + password + confirm password (no OTP)
-// Stores user in localStorage DB
+// Stores user in MongoDB via backend API (localStorage fallback if offline)
 
-function handleSignup(event) {
+async function handleSignup(event) {
   event.preventDefault();
 
   const username = document.getElementById('signup-username').value.trim();
@@ -252,9 +303,8 @@ function handleSignup(event) {
     return;
   }
 
-  // 2. Username already taken (DB + demo name)
-  const users = getUsers();
-  if (username.toLowerCase() === DEMO_USER.toLowerCase() || findUserKey(users, username)) {
+  // 2. Demo name is reserved
+  if (username.toLowerCase() === DEMO_USER.toLowerCase()) {
     showMsg('signup-msg', '⚠️ Username already taken. Try another one.', 'error');
     return;
   }
@@ -273,38 +323,45 @@ function handleSignup(event) {
 
   setLoading('signup-btn', true, 'Create Account');
 
-  setTimeout(() => {
+  const signupDone = (savedName, offline) => {
     setLoading('signup-btn', false, 'Create Account');
+    showMsg(
+      'signup-msg',
+      offline
+        ? `🎉 Account created on this device! Welcome, ${savedName}! (Server offline — will sync when online)`
+        : `🎉 Account created! Welcome, ${savedName}! Please log in.`,
+      'success'
+    );
+    clearSignupForm();
+    // Auto switch to login tab after 1.5s
+    setTimeout(() => {
+      switchTab('login');
+      document.getElementById('login-username').value = savedName;
+    }, 1500);
+  };
 
-    // Save to mini DB
+  try {
+    const { status, data } = await apiPost('/signup', { username, password });
+
+    if (status === 201 && data.ok) {
+      mirrorToLocal(data.username, password); // keep offline login working
+      signupDone(data.username, false);
+    } else {
+      setLoading('signup-btn', false, 'Create Account');
+      showMsg('signup-msg', '⚠️ ' + (data.error || 'Signup failed. Try again.'), 'error');
+    }
+  } catch {
+    // Backend unreachable — save locally so signup still works offline
     const fresh = getUsers();
-    // re-check race (double submit)
     if (findUserKey(fresh, username)) {
+      setLoading('signup-btn', false, 'Create Account');
       showMsg('signup-msg', '⚠️ Username already taken. Try another one.', 'error');
       return;
     }
     fresh[username] = password;
     saveUsers(fresh);
-
-    showMsg('signup-msg', `🎉 Account created! Welcome, ${username}! Please log in.`, 'success');
-
-    // Clear signup fields so no details stay in the inputs
-    document.getElementById('signup-username').value = '';
-    document.getElementById('signup-password').value = '';
-    document.getElementById('signup-confirm').value = '';
-    const fill = document.getElementById('strength-fill');
-    const strengthLabel = document.getElementById('strength-label');
-    const matchLabel = document.getElementById('match-label');
-    if (fill) { fill.style.width = '0%'; fill.style.background = 'transparent'; }
-    if (strengthLabel) strengthLabel.textContent = '';
-    if (matchLabel) matchLabel.textContent = '';
-
-    // Auto switch to login tab after 1.5s
-    setTimeout(() => {
-      switchTab('login');
-      document.getElementById('login-username').value = username;
-    }, 1500);
-  }, 800);
+    signupDone(username, true);
+  }
 }
 
 
