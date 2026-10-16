@@ -76,8 +76,10 @@
     </div>
   </nav>
 
-  <!-- ── MAIN CONTENT ── -->
-  <main class="main">
+  <!-- ── MAIN CONTENT (Free Fire style: stage + right friends rail) ── -->
+  <main class="main wide">
+   <div class="dash-layout">
+    <div class="dash-main">
 
     <!-- Page heading -->
     <div class="page-header">
@@ -216,21 +218,51 @@
 
     </div>
 
-    <!-- My Friends -->
-    <section class="friends-section">
-      <div class="friends-header">
-        <h2 class="friends-title">👥 My Friends</h2>
-        <button class="friends-add-btn" onclick="openFriends('find')">+ Add</button>
+    <!-- Party Room -->
+    <div class="party-card" onclick="openParty()">
+      <div class="card-glow glow-purple"></div>
+      <div class="party-info">
+        <div class="instrument-icon-wrapper icon-purple">
+          <div class="instrument-emoji">🎉</div>
+        </div>
+        <div>
+          <h2 class="instrument-name">Party Room</h2>
+          <p class="instrument-desc">Custom room — invite friends, see who's in, start together.</p>
+        </div>
       </div>
-      <div class="friends-grid" id="friends-grid">
-        <p class="friends-empty" id="friends-empty">No friends yet — tap + Add to find musicians 🎵</p>
-      </div>
-    </section>
+      <span class="play-btn">▶ Open</span>
+    </div>
 
     <!-- Bottom hint -->
     <p class="bottom-hint">💡 Tip: Click any card to open the full instrument studio</p>
 
+    </div><!-- /dash-main -->
+
+    <!-- Right vertical friends rail -->
+    <aside class="friends-rail">
+      <div class="rail-title">👥<span id="rail-count"></span></div>
+      <div class="rail-list" id="rail-list">
+        <p class="rail-empty">No friends yet</p>
+      </div>
+      <button class="rail-add" onclick="openFriends('find')" title="Add friends">+</button>
+    </aside>
+   </div><!-- /dash-layout -->
+
   </main>
+
+  <!-- Party Invite Popup -->
+  <div class="modal-overlay hidden" id="invite-modal">
+    <div class="invite-box">
+      <div class="invite-avatar" id="invite-avatar">?</div>
+      <p class="invite-text" id="invite-text">Your friend invited you to the party!</p>
+      <div class="invite-timer-bar"><div class="invite-timer-fill" id="invite-timer-fill"></div></div>
+      <p class="invite-count" id="invite-count">10s</p>
+      <div class="modal-buttons">
+        <button class="btn-cancel" onclick="declineInvite()">Decline</button>
+        <button class="btn-confirm invite-join" onclick="acceptInvite()">Join 🎉</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Friends Big Box -->
   <div class="modal-overlay hidden" id="friends-modal">
@@ -286,6 +318,7 @@
     <span class="toast-msg" id="toast-msg"></span>
   </div>
 
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <script src="instruments.js"></script>
 </body>
 </html>

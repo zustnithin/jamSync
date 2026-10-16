@@ -9,14 +9,21 @@
 
 require('dotenv').config();
 const express = require('express');
+const http = require('http');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
+const { Server } = require('socket.io');
 const User = require('./models/User');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// Realtime layer for party rooms (see party.js for the protocol)
+const server = http.createServer(app);
+const io = new Server(server, { cors: { origin: '*' } });
+require('./party')(io);
 
 const DEMO_USER = 'nithin';
 const USERNAME_RE = /^[a-zA-Z0-9_]+$/;
@@ -94,4 +101,4 @@ app.post('/api/login', async (req, res) => {
 app.use('/api', require('./routes/friends'));
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🎵 JamSync API on http://localhost:${PORT}`));
+server.listen(PORT, () => console.log(`🎵 JamSync API + Party socket on http://localhost:${PORT}`));

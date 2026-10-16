@@ -397,26 +397,118 @@ async function refreshBadge() {
   }
 }
 
-// ─── FRIENDS LIST on dashboard ───
+// ─── FRIENDS RAIL on dashboard (vertical bar, Free Fire style) ───
 async function loadFriends() {
-  const grid = document.getElementById('friends-grid');
+  const list = document.getElementById('rail-list');
+  const count = document.getElementById('rail-count');
   try {
     const data = await friendGet(`/friends?user=${encodeURIComponent(me())}`);
-    grid.innerHTML = '';
+    list.innerHTML = '';
+    count.textContent = data.friends.length ? data.friends.length : '';
     if (!data.friends.length) {
-      grid.innerHTML = '<p class="friends-empty" id="friends-empty">No friends yet — tap + Add to find musicians 🎵</p>';
+      list.innerHTML = '<p class="rail-empty">No friends yet</p>';
       return;
     }
     data.friends.forEach((f) => {
-      const card = document.createElement('div');
-      card.className = 'friend-card';
-      card.innerHTML = `<div class="avatar-lg">${avatarOf(f.username)}</div>
-                        <span class="friend-card-name"></span>
-                        <span class="friend-card-sub">🟢 Friend</span>`;
-      card.querySelector('.friend-card-name').textContent = f.username;
-      grid.appendChild(card);
+      const b = document.createElement('button');
+      b.className = 'rail-user';
+      b.title = f.username;
+      b.onclick = () => openFriends('find');
+      b.innerHTML = `<span class="rail-dot"></span>
+                     <span class="rail-avatar">${avatarOf(f.username)}</span>
+                     <span class="rail-name"></span>`;
+      b.querySelector('.rail-name').textContent = f.username;
+      list.appendChild(b);
     });
   } catch {
-    grid.innerHTML = '<p class="friends-empty">Friends need the server online 📡 (start backend with npm start)</p>';
+    list.innerHTML = '<p class="rail-empty">Offline 📡</p>';
   }
 }
+
+function openParty() {
+  window.open('party.html', '_blank');
+}
+
+
+// ─── PARTY SOCKET + INVITE POPUP ───────────────
+// Same invite popup works from every page with a socket.
+let partySocket = null;
+let inviteFrom = '';
+let inviteTimerID = null;
+
+function connectPartySocket() {
+  if (partySocket || typeof io === 'undefined') return;
+  try {
+    partySocket = io('http://localhost:5000', { query: { user: me(), name: me() } });
+  } catch {
+    return; // server offline — party features sleep quietly
+  }
+
+  partySocket.on('party:invited', ({ from }) => showInvite(from));
+  partySocket.on('party:invite-expired', () => {
+    hideInvite();
+    showToast('⌛ Party invite expired');
+  });
+}
+
+function showInvite(from) {
+  inviteFrom = from;
+  document.getElementById('invite-avatar').textContent = avatarOf(from);
+  document.getElementById('invite-text').innerHTML = '';
+  const t = document.getElementById('invite-text');
+  t.append('Your friend ');
+  const s = document.createElement('strong');
+  s.textContent = from;
+  t.append(s, ' invited you to the party! 🎉');
+  document.getElementById('invite-modal').classList.remove('hidden');
+
+  // 10s countdown bar
+  clearInterval(inviteTimerID);
+  let left = 10;
+  const fill = document.getElementById('invite-timer-fill');
+  const num = document.getElementById('invite-count');
+  fill.style.transition = 'none';
+  fill.style.width = '100%';
+  num.textContent = left + 's';
+  requestAnimationFrame(() => {
+    fill.style.transition = 'width 1s linear';
+  });
+  inviteTimerID = setInterval(() => {
+    left--;
+    if (left <= 0) {
+      clearInterval(inviteTimerID);
+      hideInvite();
+      return;
+    }
+    fill.style.width = left * 10 + '%';
+    num.textContent = left + 's';
+  }, 1000);
+}
+
+function hideInvite() {
+  clearInterval(inviteTimerID);
+  inviteFrom = '';
+  document.getElementById('invite-modal').classList.add('hidden');
+}
+
+function acceptInvite() {
+  const from = inviteFrom;
+  if (partySocket && from) {
+    partySocket.emit('party:invite-respond', { from, to: me(), accept: true });
+  }
+  hideInvite();
+  window.open('party.html', '_blank');
+}
+
+function declineInvite() {
+  const from = inviteFrom;
+  if (partySocket && from) {
+    partySocket.emit('party:invite-respond', { from, to: me(), accept: false });
+  }
+  hideInvite();
+}
+
+// connect after username is known
+window.addEventListener('DOMContentLoaded', () => {
+  connectPartySocket();
+});

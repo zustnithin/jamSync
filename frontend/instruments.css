@@ -708,54 +708,6 @@ html, body {
 }
 .friend-badge.hidden { display: none; }
 
-/* ── FRIENDS SECTION (dashboard) ── */
-.friends-section {
-  margin-top: 40px;
-  background: rgba(15,15,25,0.8);
-  border: 1px solid var(--border);
-  border-radius: 24px;
-  padding: 28px;
-  backdrop-filter: blur(10px);
-}
-.friends-header {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 20px;
-}
-.friends-title { font-size: 22px; font-weight: 800; }
-.friends-add-btn {
-  padding: 8px 18px; border-radius: 10px; cursor: pointer;
-  background: linear-gradient(135deg, var(--purple), #6d28d9);
-  border: none; color: #fff;
-  font-family: var(--font); font-size: 13px; font-weight: 700;
-  box-shadow: 0 4px 16px rgba(124,58,237,0.4);
-  transition: transform 0.15s;
-}
-.friends-add-btn:hover { transform: translateY(-2px); }
-.friends-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 14px;
-}
-.friends-empty {
-  grid-column: 1 / -1;
-  text-align: center;
-  color: var(--text-muted);
-  font-size: 14px;
-  padding: 20px 0;
-}
-.friend-card {
-  display: flex; flex-direction: column; align-items: center; gap: 8px;
-  padding: 20px 12px;
-  background: rgba(255,255,255,0.03);
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  transition: transform 0.2s, border-color 0.2s;
-}
-.friend-card:hover { transform: translateY(-4px); border-color: rgba(124,58,237,0.4); }
-.friend-card .avatar-lg { width: 52px; height: 52px; font-size: 22px; }
-.friend-card-name { font-size: 14px; font-weight: 700; word-break: break-all; text-align: center; }
-.friend-card-sub { font-size: 11px; color: #22c55e; font-weight: 600; }
-
 /* ── FRIENDS BIG BOX (modal) ── */
 .friends-box {
   background: rgba(15,15,25,0.98);
@@ -863,7 +815,127 @@ html, body {
 .reject-btn { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); }
 .reject-btn:hover { transform: scale(1.1); background: rgba(239,68,68,0.25); }
 
+/* ── DASHBOARD LAYOUT (stage + right rail) ── */
+.main.wide { max-width: 1280px; }
+.dash-layout { display: flex; gap: 20px; align-items: flex-start; }
+.dash-main { flex: 1; min-width: 0; }
+.dash-main .page-header { text-align: left; margin-bottom: 24px; }
+.dash-main .page-title { font-size: clamp(26px, 3.5vw, 38px); }
+
+/* Compact instrument cards */
+.dash-main .instruments-grid { gap: 16px; }
+.dash-main .card-inner { padding: 20px; gap: 12px; }
+.dash-main .instrument-icon-wrapper { width: 56px; height: 56px; border-radius: 16px; }
+.dash-main .instrument-emoji { font-size: 28px; }
+.dash-main .instrument-name { font-size: 19px; }
+.dash-main .instrument-desc { font-size: 13px; }
+
+/* Party room card */
+.party-card {
+  position: relative;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  margin-top: 16px; padding: 22px 24px;
+  background: linear-gradient(135deg, rgba(124,58,237,0.18), rgba(236,72,153,0.1));
+  border: 1px solid rgba(124,58,237,0.4);
+  border-radius: 24px;
+  cursor: pointer; overflow: hidden;
+  transition: transform 0.25s, box-shadow 0.25s;
+}
+.party-card:hover { transform: translateY(-4px); box-shadow: 0 20px 50px rgba(124,58,237,0.35); }
+.party-info { display: flex; align-items: center; gap: 16px; }
+.party-card .play-btn {
+  font-size: 13px; font-weight: 700; padding: 8px 18px; border-radius: 10px;
+  background: linear-gradient(135deg, var(--purple), #6d28d9);
+  border: none; color: #fff; white-space: nowrap;
+}
+
+/* Right vertical friends rail */
+.friends-rail {
+  width: 92px; flex-shrink: 0;
+  position: sticky; top: 88px;
+  background: rgba(15,15,25,0.8);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  padding: 16px 10px;
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  backdrop-filter: blur(10px);
+  max-height: calc(100vh - 110px);
+  overflow-y: auto;
+}
+.rail-title { font-size: 22px; font-weight: 800; display: flex; flex-direction: column; align-items: center; }
+.rail-title span { font-size: 11px; color: var(--text-muted); font-weight: 600; }
+.rail-list { display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%; }
+.rail-empty { font-size: 10px; color: var(--text-muted); text-align: center; }
+.rail-user {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  cursor: pointer; width: 100%;
+  background: none; border: none; color: var(--text); font-family: var(--font);
+  position: relative;
+}
+.rail-avatar {
+  width: 48px; height: 48px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--purple), var(--pink));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 19px; font-weight: 700; color: #fff;
+  border: 2px solid rgba(124,58,237,0.5);
+  transition: transform 0.15s;
+}
+.rail-user:hover .rail-avatar { transform: scale(1.1); }
+.rail-dot {
+  position: absolute; top: 2px; right: 12px;
+  width: 12px; height: 12px; border-radius: 50%;
+  background: #22c55e; border: 2px solid #0a0a0f;
+}
+.rail-name { font-size: 10px; font-weight: 600; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rail-add {
+  width: 44px; height: 44px; border-radius: 50%; cursor: pointer;
+  background: rgba(124,58,237,0.2); border: 1px dashed rgba(124,58,237,0.6);
+  color: #ddd6fe; font-size: 22px; font-weight: 700;
+  transition: transform 0.15s, background 0.2s;
+}
+.rail-add:hover { transform: scale(1.1); background: rgba(124,58,237,0.4); }
+
+/* Party invite popup */
+.invite-box {
+  background: rgba(15,15,25,0.98);
+  border: 1px solid rgba(124,58,237,0.5);
+  border-radius: 24px;
+  padding: 32px 28px;
+  text-align: center;
+  max-width: 360px; width: 90%;
+  box-shadow: 0 0 50px rgba(124,58,237,0.35);
+  animation: modal-in 0.25s cubic-bezier(0.34,1.56,0.64,1);
+}
+.invite-avatar {
+  width: 72px; height: 72px; border-radius: 50%; margin: 0 auto 14px;
+  background: linear-gradient(135deg, var(--purple), var(--pink));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 30px; font-weight: 800; color: #fff;
+  box-shadow: 0 0 24px rgba(124,58,237,0.6);
+  animation: invite-ring 1s ease-in-out infinite alternate;
+}
+@keyframes invite-ring {
+  0% { box-shadow: 0 0 12px rgba(124,58,237,0.4); }
+  100% { box-shadow: 0 0 32px rgba(236,72,153,0.8); }
+}
+.invite-text { font-size: 16px; font-weight: 600; margin-bottom: 16px; line-height: 1.5; }
+.invite-text strong { color: var(--purple-lt); }
+.invite-timer-bar { height: 6px; border-radius: 3px; background: rgba(255,255,255,0.08); overflow: hidden; margin-bottom: 6px; }
+.invite-timer-fill { height: 100%; width: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--cyan), var(--purple), var(--pink)); transition: width 1s linear; }
+.invite-count { font-size: 13px; font-weight: 700; color: var(--text-muted); margin-bottom: 18px; }
+.invite-join { background: linear-gradient(135deg, #22c55e, #16a34a) !important; box-shadow: 0 4px 15px rgba(34,197,94,0.35) !important; }
+
 /* ── RESPONSIVE ── */
+@media (max-width: 900px) {
+  .dash-layout { flex-direction: column; }
+  .friends-rail {
+    width: 100%; flex-direction: row;
+    position: static; max-height: none;
+    padding: 12px 16px; overflow-x: auto;
+  }
+  .rail-title { flex-direction: row; gap: 6px; }
+  .rail-list { flex-direction: row; width: auto; flex: 1; }
+}
 @media (max-width: 700px) {
   .instruments-grid { grid-template-columns: 1fr; }
   .nav-center { display: none; }
