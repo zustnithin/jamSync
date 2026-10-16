@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>JamSync — Piano Studio</title>
+  <meta name="description" content="Play a realistic grand piano in your browser on JamSync." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="piano.css" />
+</head>
+<body>
+
+  <!-- Animated background -->
+  <div class="bg-wrapper">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+    <div class="bars-bg">
+      <span></span><span></span><span></span><span></span>
+      <span></span><span></span><span></span><span></span>
+      <span></span><span></span><span></span><span></span>
+    </div>
+  </div>
+
+  <!-- ── TOP NAVBAR ── -->
+  <nav class="navbar">
+    <div class="nav-left">
+      <button class="back-btn" onclick="goBack()" title="Back to instruments">←</button>
+      <div class="nav-logo" onclick="goBack()" style="cursor:pointer">
+        <div class="logo-icon">🎹</div>
+        <span class="logo-text">Piano Studio</span>
+      </div>
+    </div>
+
+    <div class="nav-center">
+      <span class="nav-tagline" id="octave-tagline">🎼 C4 – B5 &nbsp;•&nbsp; 2 octaves</span>
+    </div>
+
+    <!-- Profile -->
+    <div class="nav-right">
+      <div class="profile-wrapper" id="profile-wrapper">
+        <button class="profile-btn" id="profile-btn" onclick="toggleDropdown()">
+          <div class="avatar" id="avatar-circle">N</div>
+          <span class="profile-name" id="profile-name">Musician</span>
+          <span class="chevron" id="chevron">▾</span>
+        </button>
+        <div class="dropdown" id="dropdown">
+          <div class="dropdown-header">
+            <div class="avatar-lg" id="avatar-lg">N</div>
+            <div>
+              <div class="dropdown-username" id="dropdown-username">Musician</div>
+              <div class="dropdown-role">🎵 Musician</div>
+            </div>
+          </div>
+          <div class="dropdown-divider"></div>
+          <button class="dropdown-item" onclick="goToInstruments()"><span>🎸</span> All Instruments</button>
+          <div class="dropdown-divider"></div>
+          <button class="dropdown-item logout" onclick="logout()"><span>🚪</span> Log Out</button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ── MAIN STUDIO ── -->
+  <main class="main">
+
+    <!-- Controls bar -->
+    <section class="controls">
+      <div class="ctrl-group">
+        <span class="ctrl-label">Octave</span>
+        <div class="octave-ctrl">
+          <button class="ctrl-btn" id="oct-down" onclick="shiftOctave(-1)" title="Octave down ([)">−</button>
+          <span class="octave-display" id="octave-display">C4</span>
+          <button class="ctrl-btn" id="oct-up" onclick="shiftOctave(1)" title="Octave up (])">+</button>
+        </div>
+      </div>
+
+      <div class="ctrl-group">
+        <span class="ctrl-label">Sound</span>
+        <div class="sound-tabs" id="sound-tabs">
+          <button class="sound-btn active" data-sound="grand" onclick="setSound('grand')">Grand</button>
+          <button class="sound-btn" data-sound="soft" onclick="setSound('soft')">Soft</button>
+          <button class="sound-btn" data-sound="bright" onclick="setSound('bright')">Bright</button>
+          <button class="sound-btn" data-sound="electric" onclick="setSound('electric')">Electric</button>
+        </div>
+      </div>
+
+      <div class="ctrl-group">
+        <span class="ctrl-label">Volume</span>
+        <input type="range" class="volume-slider" id="volume" min="0" max="100" value="80" oninput="setVolume(this.value)" />
+      </div>
+
+      <div class="ctrl-group ctrl-toggles">
+        <button class="toggle-btn" id="sustain-btn" onclick="toggleSustain()" title="Hold Space for temporary sustain">
+          <span class="toggle-icon">🦶</span> Sustain <span class="toggle-state" id="sustain-state">Off</span>
+        </button>
+        <button class="toggle-btn on" id="labels-btn" onclick="toggleLabels()" title="Show / hide key hints">
+          <span class="toggle-icon">🏷️</span> Labels <span class="toggle-state" id="labels-state">On</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Now playing -->
+    <section class="now-playing">
+      <span class="np-dot" id="np-dot"></span>
+      <span class="np-text" id="now-playing">Press a key or click the piano…</span>
+    </section>
+
+    <!-- Piano -->
+    <section class="piano-shell">
+      <div class="piano-top"></div>
+      <div class="piano" id="piano"><!-- keys rendered by piano.js --></div>
+      <div class="piano-hint">Drag across keys for glissando &nbsp;•&nbsp; Hold <kbd>Space</kbd> for sustain</div>
+    </section>
+
+    <!-- Keyboard shortcuts -->
+    <section class="shortcuts">
+      <h3 class="shortcuts-title">⌨️ Play from your keyboard</h3>
+      <div class="shortcut-grid">
+        <div class="shortcut-card">
+          <div class="shortcut-row"><kbd>A</kbd><kbd>W</kbd><kbd>S</kbd><kbd>E</kbd><kbd>D</kbd><kbd>F</kbd><kbd>T</kbd></div>
+          <p>C &nbsp;C♯ &nbsp;D &nbsp;D♯ &nbsp;E &nbsp;F &nbsp;F♯ …</p>
+        </div>
+        <div class="shortcut-card">
+          <div class="shortcut-row"><kbd>G</kbd><kbd>Y</kbd><kbd>H</kbd><kbd>U</kbd><kbd>J</kbd><kbd>K</kbd></div>
+          <p>G &nbsp;G♯ &nbsp;A &nbsp;A♯ &nbsp;B &nbsp;C+ …</p>
+        </div>
+        <div class="shortcut-card">
+          <div class="shortcut-row"><kbd>O</kbd><kbd>L</kbd><kbd>P</kbd><kbd>;</kbd></div>
+          <p>C♯+ &nbsp;D+ &nbsp;D♯+ &nbsp;E+ …</p>
+        </div>
+        <div class="shortcut-card">
+          <div class="shortcut-row"><kbd>[</kbd><kbd>]</kbd> <span class="plus">or</span> <kbd>Z</kbd><kbd>X</kbd></div>
+          <p>Octave down / up</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Logout modal -->
+  <div class="modal-overlay hidden" id="logout-modal">
+    <div class="modal">
+      <div class="modal-icon">🚪</div>
+      <h3 class="modal-title">Log Out?</h3>
+      <p class="modal-desc">Are you sure you want to leave your jam session?</p>
+      <div class="modal-buttons">
+        <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+        <button class="btn-confirm" onclick="confirmLogout()">Yes, Log Out</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast hidden" id="toast">
+    <span class="toast-icon">🎹</span>
+    <span class="toast-msg" id="toast-msg"></span>
+  </div>
+
+  <script src="piano.js"></script>
+</body>
+</html>

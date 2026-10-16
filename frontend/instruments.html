@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>JamSync — Choose Your Instrument</title>
+  <meta name="description" content="Choose an instrument and start jamming on JamSync." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="instruments.css" />
+</head>
+<body>
+
+  <!-- Animated background -->
+  <div class="bg-wrapper">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+    <div class="bars-bg">
+      <span></span><span></span><span></span><span></span>
+      <span></span><span></span><span></span><span></span>
+      <span></span><span></span><span></span><span></span>
+    </div>
+  </div>
+
+  <!-- ── TOP NAVBAR ── -->
+  <nav class="navbar">
+    <div class="nav-logo">
+      <div class="logo-icon">🎵</div>
+      <span class="logo-text">JamSync</span>
+    </div>
+
+    <div class="nav-center">
+      <span class="nav-tagline">🎸 Pick your instrument and start jamming</span>
+    </div>
+
+    <!-- Profile Icon + Dropdown -->
+    <div class="nav-right">
+      <div class="profile-wrapper" id="profile-wrapper">
+        <button class="profile-btn" id="profile-btn" onclick="toggleDropdown()">
+          <div class="avatar" id="avatar-circle">N</div>
+          <span class="profile-name" id="profile-name">nithin</span>
+          <span class="chevron" id="chevron">▾</span>
+        </button>
+
+        <!-- Dropdown Menu -->
+        <div class="dropdown" id="dropdown">
+          <div class="dropdown-header">
+            <div class="avatar-lg" id="avatar-lg">N</div>
+            <div>
+              <div class="dropdown-username" id="dropdown-username">nithin</div>
+              <div class="dropdown-role">🎵 Musician</div>
+            </div>
+          </div>
+          <div class="dropdown-divider"></div>
+          <button class="dropdown-item" onclick="goToProfile()">
+            <span>👤</span> My Profile
+          </button>
+          <button class="dropdown-item" onclick="goToSettings()">
+            <span>⚙️</span> Settings
+          </button>
+          <button class="dropdown-item" onclick="goToRooms()">
+            <span>🌐</span> My Rooms
+          </button>
+          <div class="dropdown-divider"></div>
+          <button class="dropdown-item logout" onclick="logout()">
+            <span>🚪</span> Log Out
+          </button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ── MAIN CONTENT ── -->
+  <main class="main">
+
+    <!-- Page heading -->
+    <div class="page-header">
+      <h1 class="page-title">Choose Your <span class="gradient-text">Instrument</span></h1>
+      <p class="page-sub">Select an instrument to open the studio. More coming soon!</p>
+    </div>
+
+    <!-- Instrument Cards Grid -->
+    <div class="instruments-grid">
+
+      <!-- PIANO -->
+      <div class="instrument-card" id="card-piano" onclick="openInstrument('piano')">
+        <div class="card-glow glow-purple"></div>
+        <div class="card-inner">
+          <div class="instrument-icon-wrapper icon-purple">
+            <div class="instrument-emoji">🎹</div>
+          </div>
+          <div class="instrument-info">
+            <h2 class="instrument-name">Piano</h2>
+            <p class="instrument-desc">88 keys, full octave range.<br/>Perfect for melody and chords.</p>
+            <div class="instrument-tags">
+              <span class="tag">Melody</span>
+              <span class="tag">Chords</span>
+              <span class="tag">Beginner Friendly</span>
+            </div>
+          </div>
+          <div class="card-footer">
+            <span class="status-dot dot-ready"></span>
+            <span class="status-text">Ready to Play</span>
+            <span class="play-btn">▶ Open</span>
+          </div>
+        </div>
+        <div class="card-keys-preview">
+          <div class="preview-key white"></div>
+          <div class="preview-key black"></div>
+          <div class="preview-key white"></div>
+          <div class="preview-key black"></div>
+          <div class="preview-key white"></div>
+          <div class="preview-key white"></div>
+          <div class="preview-key black"></div>
+          <div class="preview-key white"></div>
+        </div>
+      </div>
+
+      <!-- VIOLIN -->
+      <div class="instrument-card" id="card-violin" onclick="openInstrument('violin')">
+        <div class="card-glow glow-pink"></div>
+        <div class="card-inner">
+          <div class="instrument-icon-wrapper icon-pink">
+            <div class="instrument-emoji">🎻</div>
+          </div>
+          <div class="instrument-info">
+            <h2 class="instrument-name">Violin</h2>
+            <p class="instrument-desc">Expressive strings with vibrato.<br/>Beautiful for solos and leads.</p>
+            <div class="instrument-tags">
+              <span class="tag">Strings</span>
+              <span class="tag">Vibrato</span>
+              <span class="tag">Lead</span>
+            </div>
+          </div>
+          <div class="card-footer">
+            <span class="status-dot dot-ready"></span>
+            <span class="status-text">Ready to Play</span>
+            <span class="play-btn">▶ Open</span>
+          </div>
+        </div>
+        <div class="violin-strings">
+          <div class="string s1"></div>
+          <div class="string s2"></div>
+          <div class="string s3"></div>
+          <div class="string s4"></div>
+        </div>
+      </div>
+
+      <!-- DRUMS -->
+      <div class="instrument-card" id="card-drums" onclick="openInstrument('drums')">
+        <div class="card-glow glow-orange"></div>
+        <div class="card-inner">
+          <div class="instrument-icon-wrapper icon-orange">
+            <div class="instrument-emoji">🥁</div>
+          </div>
+          <div class="instrument-info">
+            <h2 class="instrument-name">Drums</h2>
+            <p class="instrument-desc">Full drum kit with pads.<br/>Kick, snare, hi-hat and more.</p>
+            <div class="instrument-tags">
+              <span class="tag">Rhythm</span>
+              <span class="tag">Beat Maker</span>
+              <span class="tag">Percussion</span>
+            </div>
+          </div>
+          <div class="card-footer">
+            <span class="status-dot dot-ready"></span>
+            <span class="status-text">Ready to Play</span>
+            <span class="play-btn">▶ Open</span>
+          </div>
+        </div>
+        <div class="drum-pads-preview">
+          <div class="mini-pad pad-kick"></div>
+          <div class="mini-pad pad-snare"></div>
+          <div class="mini-pad pad-hihat"></div>
+          <div class="mini-pad pad-crash"></div>
+        </div>
+      </div>
+
+      <!-- GUITAR -->
+      <div class="instrument-card" id="card-guitar" onclick="openInstrument('guitar')">
+        <div class="card-glow glow-cyan"></div>
+        <div class="card-inner">
+          <div class="instrument-icon-wrapper icon-cyan">
+            <div class="instrument-emoji">🎸</div>
+          </div>
+          <div class="instrument-info">
+            <h2 class="instrument-name">Guitar</h2>
+            <p class="instrument-desc">Electric and acoustic chords.<br/>Strum, pick and riff freely.</p>
+            <div class="instrument-tags">
+              <span class="tag">Chords</span>
+              <span class="tag">Riffs</span>
+              <span class="tag">Electric</span>
+            </div>
+          </div>
+          <div class="card-footer">
+            <span class="status-dot dot-ready"></span>
+            <span class="status-text">Ready to Play</span>
+            <span class="play-btn">▶ Open</span>
+          </div>
+        </div>
+        <div class="guitar-strings">
+          <div class="g-string gs1"></div>
+          <div class="g-string gs2"></div>
+          <div class="g-string gs3"></div>
+          <div class="g-string gs4"></div>
+          <div class="g-string gs5"></div>
+          <div class="g-string gs6"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Bottom hint -->
+    <p class="bottom-hint">💡 Tip: Click any card to open the full instrument studio</p>
+
+  </main>
+
+  <!-- Logout Confirmation Modal -->
+  <div class="modal-overlay hidden" id="logout-modal">
+    <div class="modal">
+      <div class="modal-icon">🚪</div>
+      <h3 class="modal-title">Log Out?</h3>
+      <p class="modal-desc">Are you sure you want to leave your jam session?</p>
+      <div class="modal-buttons">
+        <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+        <button class="btn-confirm" onclick="confirmLogout()">Yes, Log Out</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Coming Soon Toast -->
+  <div class="toast hidden" id="toast">
+    <span class="toast-icon">🔧</span>
+    <span class="toast-msg" id="toast-msg"></span>
+  </div>
+
+  <script src="instruments.js"></script>
+</body>
+</html>

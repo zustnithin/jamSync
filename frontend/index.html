@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>JamSync — Play Together, Live</title>
+  <meta name="description" content="JamSync is a real-time music collaboration platform. Play instruments, jam with friends, sync songs together." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- Animated background particles -->
+  <div class="bg-wrapper">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+    <div class="bars-bg">
+      <span></span><span></span><span></span><span></span>
+      <span></span><span></span><span></span><span></span>
+      <span></span><span></span><span></span><span></span>
+    </div>
+  </div>
+
+  <!-- Main container -->
+  <div class="page">
+
+    <!-- Left Panel — Branding -->
+    <div class="left-panel">
+      <div class="logo">
+        <div class="logo-icon">🎵</div>
+        <span class="logo-text">JamSync</span>
+      </div>
+
+      <div class="brand-content">
+        <h1 class="brand-title">Make Music<br/><span class="gradient-text">Together.</span></h1>
+        <p class="brand-sub">Play instruments. Jam with friends. Sync songs in real-time. All in your browser.</p>
+
+        <div class="features">
+          <div class="feature-item">
+            <div class="feature-icon">🎹</div>
+            <div>
+              <div class="feature-title">Real Instruments</div>
+              <div class="feature-desc">Piano, drums, synths & more</div>
+            </div>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon">🌐</div>
+            <div>
+              <div class="feature-title">Live Rooms</div>
+              <div class="feature-desc">Invite friends, play together</div>
+            </div>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon">🎵</div>
+            <div>
+              <div class="feature-title">Song Sync</div>
+              <div class="feature-desc">Everyone hears the same beat</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Animated mini piano visual -->
+      <div class="mini-piano">
+        <div class="mini-key white active-1"></div>
+        <div class="mini-key black b1 active-2"></div>
+        <div class="mini-key white active-3"></div>
+        <div class="mini-key black b2"></div>
+        <div class="mini-key white active-1"></div>
+        <div class="mini-key white active-4"></div>
+        <div class="mini-key black b3 active-2"></div>
+        <div class="mini-key white active-3"></div>
+        <div class="mini-key black b4"></div>
+        <div class="mini-key white active-1"></div>
+        <div class="mini-key black b5 active-4"></div>
+        <div class="mini-key white active-2"></div>
+      </div>
+    </div>
+
+    <!-- Right Panel — Auth Card -->
+    <div class="right-panel">
+      <div class="auth-card">
+
+        <!-- Tab switcher -->
+        <div class="tab-switcher">
+          <button class="tab active" id="tab-login" onclick="switchTab('login')">Login</button>
+          <button class="tab" id="tab-signup" onclick="switchTab('signup')">Sign Up</button>
+          <div class="tab-slider" id="tab-slider"></div>
+        </div>
+
+        <!-- LOGIN FORM -->
+        <form class="auth-form" id="login-form" onsubmit="handleLogin(event)">
+          <div class="form-header">
+            <h2>Welcome back 👋</h2>
+            <p>Jump back into your jam session</p>
+          </div>
+
+          <div class="input-group">
+            <label for="login-username">Username</label>
+            <div class="input-wrapper">
+              <span class="input-icon">🎤</span>
+              <input
+                type="text"
+                id="login-username"
+                placeholder="Your username"
+                required
+                autocomplete="username"
+              />
+            </div>
+          </div>
+
+          <div class="input-group">
+            <label for="login-password">Password</label>
+            <div class="input-wrapper">
+              <span class="input-icon">🔒</span>
+              <input
+                type="password"
+                id="login-password"
+                placeholder="Enter your password"
+                required
+                autocomplete="current-password"
+              />
+              <button type="button" class="eye-btn" onclick="togglePassword('login-password', this)">👁️</button>
+            </div>
+          </div>
+
+          <div class="forgot-row">
+            <a href="#" class="forgot-link">Forgot password?</a>
+          </div>
+
+          <button type="submit" class="btn-primary" id="login-btn">
+            <span class="btn-text">Login to JamSync</span>
+            <span class="btn-icon">→</span>
+          </button>
+
+          <div class="msg-box" id="login-msg"></div>
+        </form>
+
+        <!-- SIGNUP FORM -->
+        <form class="auth-form hidden" id="signup-form" onsubmit="handleSignup(event)">
+          <div class="form-header">
+            <h2>Create account 🎸</h2>
+            <p>Start your music journey today</p>
+          </div>
+
+          <!-- Username -->
+          <div class="input-group">
+            <label for="signup-username">Username</label>
+            <div class="input-wrapper">
+              <span class="input-icon">🎤</span>
+              <input
+                type="text"
+                id="signup-username"
+                placeholder="Choose a unique username"
+                required
+                autocomplete="username"
+              />
+            </div>
+          </div>
+
+          <!-- Password -->
+          <div class="input-group">
+            <label for="signup-password">Password</label>
+            <div class="input-wrapper">
+              <span class="input-icon">🔒</span>
+              <input
+                type="password"
+                id="signup-password"
+                placeholder="Min 8 characters"
+                required
+                autocomplete="new-password"
+              />
+              <button type="button" class="eye-btn" onclick="togglePassword('signup-password', this)">👁️</button>
+            </div>
+            <div class="password-strength" id="strength-bar">
+              <div class="strength-fill" id="strength-fill"></div>
+            </div>
+            <div class="strength-label" id="strength-label"></div>
+          </div>
+
+          <!-- Confirm Password -->
+          <div class="input-group">
+            <label for="signup-confirm">Confirm Password</label>
+            <div class="input-wrapper">
+              <span class="input-icon">✅</span>
+              <input
+                type="password"
+                id="signup-confirm"
+                placeholder="Re-enter your password"
+                required
+                autocomplete="new-password"
+              />
+              <button type="button" class="eye-btn" onclick="togglePassword('signup-confirm', this)">👁️</button>
+            </div>
+            <div class="match-label" id="match-label"></div>
+          </div>
+
+          <button type="submit" class="btn-primary" id="signup-btn">
+            <span class="btn-text">Create Account</span>
+            <span class="btn-icon">🎵</span>
+          </button>
+
+          <p class="terms-text">By signing up you agree to our <a href="#">Terms</a> and <a href="#">Privacy Policy</a></p>
+
+          <div class="msg-box" id="signup-msg"></div>
+        </form>
+
+      </div>
+    </div>
+
+  </div>
+
+  <script src="login.js"></script>
+</body>
+</html>
