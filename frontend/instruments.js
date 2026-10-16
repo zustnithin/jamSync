@@ -5,7 +5,8 @@
    friends (find / requests / list)
 ============================================= */
 
-const FRIEND_API = 'http://localhost:5000/api';
+const FRIEND_API = window.API_BASE || 'http://localhost:5000/api';
+const SOCKET_URL = window.BACKEND_URL || 'http://localhost:5000';
 
 const me = () => localStorage.getItem('jamsync_user') || '';
 const avatarOf = (name) => (name.charAt(0) || 'M').toUpperCase();
@@ -622,7 +623,7 @@ let inviteTimerID = null;
 function connectPartySocket() {
   if (partySocket || typeof io === 'undefined') return;
   try {
-    partySocket = io('http://localhost:5000', { query: { user: me(), name: me() } });
+    partySocket = io(SOCKET_URL, { query: { user: me(), name: me() } });
   } catch {
     return; // server offline — party features sleep quietly
   }

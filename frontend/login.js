@@ -9,7 +9,7 @@
 
 
 // ─── CONFIG ────────────────────────────────────
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = window.API_BASE || 'http://localhost:5000/api';
 const USERS_KEY = 'jamsync_users';
 const DEMO_USER = 'nithin';
 const DEMO_PASS = 'demo1234';
