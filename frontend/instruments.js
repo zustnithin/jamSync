@@ -426,7 +426,190 @@ async function loadFriends() {
 }
 
 function openParty() {
-  window.open('party.html', '_blank');
+  // Same-tab slide: hide home, show party view (no new tab)
+  document.getElementById('view-home').classList.add('hidden');
+  const pv = document.getElementById('view-party');
+  pv.classList.remove('hidden');
+  window.scrollTo(0, 0);
+  document.getElementById('party-status').textContent = '🟢 Waiting for the crew…';
+  document.getElementById('members-grid').innerHTML = '<p class="pane-hint">Joining… 🎉</p>';
+
+  if (partySocket && partySocket.connected) {
+    partySocket.emit('party:join', { user: me() });
+  }
+  loadPartyRail();
+}
+
+function closeParty() {
+  // Back / Leave: exit party, slide back home
+  try {
+    if (partySocket) partySocket.emit('party:leave', { user: me() });
+  } catch { /* going home anyway */ }
+  document.getElementById('view-party').classList.add('hidden');
+  document.getElementById('view-home').classList.remove('hidden');
+  window.scrollTo(0, 0);
+}
+
+
+// ─── PARTY VIEW: members, invites, start ───────
+let myFriends = new Set();
+let friendDisplay = {};
+let blocks = new Map();
+let blockTickID = null;
+
+async function loadPartyRail() {
+  try {
+    const data = await friendGet(`/friends?user=${encodeURIComponent(me())}`);
+    myFriends = new Set();
+    friendDisplay = {};
+    (data.friends || []).forEach((f) => {
+      myFriends.add(f.username.toLowerCase());
+      friendDisplay[f.username.toLowerCase()] = f.username;
+    });
+  } catch {
+    showToast('📡 Server offline — party needs the backend');
+  }
+  renderPartyRail();
+}
+
+function renderMembers(members) {
+  const grid = document.getElementById('members-grid');
+  if (!grid) return;
+  document.getElementById('member-count').textContent = members.length ? `(${members.length})` : '';
+  grid.innerHTML = '';
+  if (!members.length) {
+    grid.innerHTML = '<p class="pane-hint">Party is empty — invite your friends! 🎉</p>';
+    return;
+  }
+  members.forEach((name) => {
+    const isMe = name.toLowerCase() === me().toLowerCase();
+    const isFriend = myFriends.has(name.toLowerCase());
+    const card = document.createElement('div');
+    card.className = 'member-card' + (isMe ? ' me' : '');
+    card.innerHTML = `<div class="member-avatar">${avatarOf(name)}</div>
+                      <span class="member-name"></span>
+                      ${isMe ? '<span class="member-you">YOU</span>' : ''}`;
+    card.querySelector('.member-name').textContent = name;
+
+    // + on members who aren't friends → auto friend request
+    if (!isMe && !isFriend) {
+      const plus = document.createElement('button');
+      plus.className = 'member-add';
+      plus.textContent = '+';
+      plus.title = `Add ${name} as friend`;
+      plus.onclick = () => addStranger(name, plus);
+      card.appendChild(plus);
+    }
+    grid.appendChild(card);
+  });
+}
+
+async function addStranger(name, btn) {
+  btn.disabled = true;
+  btn.textContent = '⏳';
+  try {
+    const data = await friendPost('/friends/request', { from: me(), to: name });
+    btn.textContent = '✓';
+    btn.classList.add('sent');
+    showToast(data.status === 'friends' ? `🎉 You and ${name} are now friends!` : `📩 Friend request sent to ${name}`);
+    if (data.status === 'friends') {
+      myFriends.add(name.toLowerCase());
+      friendDisplay[name.toLowerCase()] = name;
+      loadFriends();
+      renderPartyRail();
+    }
+  } catch (err) {
+    btn.disabled = false;
+    btn.textContent = '+';
+    showToast('⚠️ ' + err.message);
+  }
+}
+
+function renderPartyRail() {
+  const list = document.getElementById('party-rail-list');
+  if (!list) return;
+  document.getElementById('party-rail-count').textContent = myFriends.size ? myFriends.size : '';
+  list.innerHTML = '';
+  if (!myFriends.size) {
+    list.innerHTML = '<p class="rail-empty">No friends yet</p>';
+    return;
+  }
+  [...myFriends].forEach((l) => {
+    const name = friendDisplay[l] || l;
+    const wrap = document.createElement('div');
+    wrap.className = 'rail-user';
+    wrap.innerHTML = `<span class="rail-avatar">${avatarOf(name)}</span><span class="rail-name"></span>`;
+    wrap.querySelector('.rail-name').textContent = name;
+    const btn = document.createElement('button');
+    btn.className = 'rail-invite';
+    btn.dataset.friend = l;
+    btn.title = `Invite ${name} to party`;
+    btn.onclick = () => inviteFriend(name, btn);
+    wrap.appendChild(btn);
+    list.appendChild(wrap);
+  });
+  paintInviteButtons();
+
+  clearInterval(blockTickID);
+  blockTickID = setInterval(paintInviteButtons, 1000);
+}
+
+function paintInviteButtons() {
+  const now = Date.now();
+  document.querySelectorAll('.rail-invite').forEach((btn) => {
+    if (btn.dataset.busy === '1') return;
+    const until = blocks.get(btn.dataset.friend) || 0;
+    if (now < until) {
+      const s = Math.ceil((until - now) / 1000);
+      btn.disabled = true;
+      btn.classList.add('blocked');
+      btn.textContent = `🚫 ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+    } else {
+      blocks.delete(btn.dataset.friend);
+      btn.disabled = false;
+      btn.classList.remove('blocked', 'sent');
+      btn.textContent = '+';
+    }
+  });
+}
+
+function inviteFriend(name, btn) {
+  if (!partySocket || !partySocket.connected) {
+    showToast('📡 Party server offline');
+    return;
+  }
+  btn.dataset.busy = '1';
+  btn.disabled = true;
+  btn.textContent = '⏳';
+  partySocket.emit('party:invite', { from: me(), to: name }, (res = {}) => {
+    btn.dataset.busy = '';
+    if (res.ok) {
+      btn.textContent = '✓';
+      btn.classList.add('sent');
+      showToast(`📩 Invited ${name} (10s to answer)`);
+      setTimeout(() => {
+        btn.classList.remove('sent');
+        paintInviteButtons();
+      }, 3000);
+    } else {
+      paintInviteButtons();
+      if (res.remainingSec) {
+        blocks.set(name.toLowerCase(), Date.now() + res.remainingSec * 1000);
+        paintInviteButtons();
+        showToast(`🚫 ${name} blocked for ${Math.ceil(res.remainingSec / 60)} more min`);
+      } else {
+        showToast('⚠️ ' + (res.error || 'Invite failed'));
+      }
+    }
+  });
+}
+
+function startParty() {
+  if (!partySocket || !partySocket.connected) {
+    showToast('📡 Party server offline');
+    return;
+  }
+  partySocket.emit('party:start', { user: me() });
 }
 
 
@@ -448,6 +631,22 @@ function connectPartySocket() {
   partySocket.on('party:invite-expired', () => {
     hideInvite();
     showToast('⌛ Party invite expired');
+  });
+  partySocket.on('party:members', ({ members }) => renderMembers(members || []));
+  partySocket.on('party:started', ({ by }) => {
+    const st = document.getElementById('party-status');
+    if (st) st.textContent = `🎵 Started by ${by} — jam sync coming soon!`;
+    showToast(`🎵 ${by} started the party!`);
+  });
+  partySocket.on('party:invite-accepted', ({ to }) => {
+    showToast(`🎉 ${to} accepted — joining the party!`);
+  });
+  partySocket.on('party:invite-declined', ({ to, reason }) => {
+    showToast(reason === 'timeout' ? `⌛ ${to} didn't answer` : `✕ ${to} declined`);
+    if (to) {
+      blocks.set(String(to).toLowerCase(), Date.now() + 5 * 60 * 1000);
+      renderPartyRail();
+    }
   });
 }
 
@@ -497,7 +696,7 @@ function acceptInvite() {
     partySocket.emit('party:invite-respond', { from, to: me(), accept: true });
   }
   hideInvite();
-  window.open('party.html', '_blank');
+  openParty(); // same tab slide, no new tab
 }
 
 function declineInvite() {

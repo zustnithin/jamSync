@@ -78,6 +78,7 @@
 
   <!-- ── MAIN CONTENT (Free Fire style: stage + right friends rail) ── -->
   <main class="main wide">
+  <div id="view-home" class="view">
    <div class="dash-layout">
     <div class="dash-main">
 
@@ -247,6 +248,47 @@
       <button class="rail-add" onclick="openFriends('find')" title="Add friends">+</button>
     </aside>
    </div><!-- /dash-layout -->
+  </div><!-- /view-home -->
+
+  <!-- ── PARTY VIEW (same-tab slide, no new tab) ── -->
+  <div id="view-party" class="view hidden">
+   <div class="dash-layout">
+    <div class="dash-main">
+
+      <div class="party-top">
+        <button class="back-btn" onclick="closeParty()" title="Leave party and go back">←</button>
+        <h2 class="party-heading">🎉 Party Room</h2>
+        <span class="party-status" id="party-status">🟢 Waiting for the crew…</span>
+      </div>
+
+      <!-- Who is in the party -->
+      <section class="party-box">
+        <div class="party-box-header">
+          <h2>🎶 Who's in the party <span class="member-count" id="member-count"></span></h2>
+        </div>
+        <div class="members-grid" id="members-grid">
+          <p class="pane-hint">Joining… 🎉</p>
+        </div>
+      </section>
+
+      <!-- Start + Leave -->
+      <section class="party-actions">
+        <button class="start-btn" onclick="startParty()">▶ START</button>
+        <button class="leave-btn" onclick="closeParty()">🚪 Leave Party</button>
+      </section>
+      <p class="bottom-hint">💡 Anyone in the party can press START • Back also leaves the party</p>
+
+    </div><!-- /dash-main -->
+
+    <!-- Right rail with invite buttons -->
+    <aside class="friends-rail">
+      <div class="rail-title">👥<span id="party-rail-count"></span></div>
+      <div class="rail-list" id="party-rail-list">
+        <p class="rail-empty">No friends yet</p>
+      </div>
+    </aside>
+   </div><!-- /dash-layout -->
+  </div><!-- /view-party -->
 
   </main>
 
