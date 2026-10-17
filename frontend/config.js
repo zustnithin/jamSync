@@ -7,7 +7,7 @@
     across script files.)
 ============================================= */
 
-window.PROD_BACKEND_URL = ''; // TODO: e.g. 'https://jamsync-xxxx.onrender.com'
+window.PROD_BACKEND_URL = 'https://jamsync-41h0.onrender.com'; // TODO: e.g. 'https://jamsync-xxxx.onrender.com'
 
 (function () {
   var host = (typeof location !== 'undefined' && location.hostname) || '';
