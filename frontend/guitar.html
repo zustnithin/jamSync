@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>JamSync — Guitar Studio</title>
+  <meta name="description" content="Play a realistic guitar in your browser on JamSync." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="guitar.css" />
+</head>
+<body>
+
+  <!-- Animated background -->
+  <div class="bg-wrapper">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+    <div class="bars-bg">
+      <span></span><span></span><span></span><span></span>
+      <span></span><span></span><span></span><span></span>
+    </div>
+  </div>
+
+  <!-- ── TOP BAR ── -->
+  <nav class="navbar">
+    <div class="nav-left">
+      <button class="back-btn" onclick="goBack()" title="Back to instruments">←</button>
+      <div class="nav-logo" onclick="goBack()" style="cursor:pointer">
+        <div class="logo-icon">🎸</div>
+        <span class="logo-text">Guitar Studio</span>
+      </div>
+    </div>
+    <div class="nav-center">
+      <span class="nav-tagline" id="tuning-tagline">🎸 Standard Tuning E A D G B E</span>
+    </div>
+    <div class="nav-right">
+      <span class="me-chip"><span class="avatar" id="me-avatar">M</span><span id="me-name">Musician</span></span>
+    </div>
+  </nav>
+
+  <!-- ── MAIN ── -->
+  <main class="main">
+   <div class="dash-layout">
+    <div class="dash-main">
+
+      <!-- Controls -->
+      <section class="controls">
+        <div class="ctrl-group">
+          <span class="ctrl-label">Tuning</span>
+          <div class="sound-tabs">
+            <button class="sound-btn active" data-tuning="standard" onclick="setTuning('standard')">Standard</button>
+            <button class="sound-btn" data-tuning="dropd" onclick="setTuning('dropD')">Drop D</button>
+            <button class="sound-btn" data-tuning="open" onclick="setTuning('openG')">Open G</button>
+          </div>
+        </div>
+        <div class="ctrl-group">
+          <span class="ctrl-label">Volume</span>
+          <input type="range" class="volume-slider" id="volume" min="0" max="100" value="80" oninput="setVolume(this.value)" />
+        </div>
+        <div class="ctrl-group ctrl-toggle">
+          <button class="toggle-btn on" id="fret-labels-btn" onclick="toggleFretLabels()" title="Show / hide fret numbers">
+            <span class="toggle-icon">🔢</span> Frets <span class="toggle-state" id="fret-labels-state">On</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- Now playing -->
+      <section class="now-playing">
+        <span class="np-dot" id="np-dot"></span>
+        <span class="np-text" id="now-playing">Pluck a string…</span>
+      </section>
+
+      <!-- Guitar -->
+      <section class="guitar-shell">
+        <div class="guitar-top"></div>
+        <div class="fretboard" id="fretboard"><!-- strings & frets rendered by guitar.js --></div>
+        <div class="guitar-hint">Click a string at any fret &nbsp;•&nbsp; Drag across strings to strum</div>
+      </section>
+
+      <!-- Shortcuts -->
+      <section class="shortcuts">
+        <h3 class="shortcuts-title">⌨️ Play from keyboard</h3>
+        <div class="shortcut-grid">
+          <div class="shortcut-card">
+            <div class="shortcut-row"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd><kbd>5</kbd><kbd>6</kbd></div>
+            <p>Open strings 6→1 (E A D G B E)</p>
+          </div>
+          <div class="shortcut-card">
+            <div class="shortcut-row"><kbd>Q</kbd><kbd>W</kbd><kbd>E</kbd><kbd>R</kbd><kbd>T</kbd><kbd>Y</kbd></div>
+            <p>Fret 1 on strings 6→1</p>
+          </div>
+          <div class="shortcut-card">
+            <div class="shortcut-row"><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><kbd>F</kbd><kbd>G</kbd><kbd>H</kbd></div>
+            <p>Fret 2 on strings 6→1</p>
+          </div>
+          <div class="shortcut-card">
+            <div class="shortcut-row"><kbd>Z</kbd><kbd>X</kbd><kbd>C</kbd><kbd>V</kbd><kbd>B</kbd><kbd>N</kbd></div>
+            <p>Fret 3 on strings 6→1</p>
+          </div>
+        </div>
+      </section>
+
+    </div><!-- /dash-main -->
+   </div><!-- /dash-layout -->
+  </main>
+
+  <script src="guitar.js"></script>
+</body>
+</html>

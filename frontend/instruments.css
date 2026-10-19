@@ -1011,6 +1011,27 @@ html, body {
 .rail-invite.sent { background: rgba(255,255,255,0.1); border: 1px solid var(--border); }
 .rail-invite.blocked { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.4); font-size: 11px; width: auto; padding: 0 8px; }
 
+/* Guitar string preview at bottom of card */
+.card-strings-preview {
+  display: flex;
+  height: 48px;
+  position: relative;
+  background: rgba(0,0,0,0.3);
+  border-top: 1px solid var(--border);
+  align-items: center;
+  padding: 0 20px;
+  justify-content: space-between;
+}
+.preview-string {
+  flex: 1;
+  height: 2px;
+  background: rgba(255,255,255,0.25);
+  border-radius: 1px;
+  margin: 0 2px;
+  transition: height 0.2s;
+}
+.instrument-card:hover .preview-string { height: 3px; background: rgba(249,115,22,0.6); }
+
 /* ── RESPONSIVE ── */
 @media (max-width: 900px) {
   .dash-layout { flex-direction: column; }
