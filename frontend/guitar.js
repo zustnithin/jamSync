@@ -1,16 +1,13 @@
 /* =============================================
    JAMSYNC — Guitar Studio
-   Karplus-Strong string synthesis
-   6 strings, standard / drop D / open G tunings
-   Click fretboard to pluck, drag to strum
+   Fixed: master gain, audio context resume on click,
+   oscillator-based string synthesis (reliable sound)
 ============================================= */
 
-const SAMPLE_RATE = 44100;
 const STRINGS = 6;
 const FRETS = 12;
 
-// Standard tuning: E2 A2 D3 G3 B3 E4 (midi 40,45,50,55,59,64)
-// String index 0 = low E (6th string), 5 = high E (1st string)
+// String 0 = low E (6th string), String 5 = high E (1st string)
 const TUNINGS = {
   standard: [40, 45, 50, 55, 59, 64],
   dropD:    [38, 45, 50, 55, 59, 64],
@@ -22,42 +19,39 @@ let openMidis = TUNINGS.standard.slice();
 let volume = 0.8;
 let fretLabelsOn = true;
 let audioCtx = null;
-let isStrumming = false;
-let strumStartX = 0;
+let masterGain = null;
 
 const fretboardEl = document.getElementById('fretboard');
 const nowPlayingEl = document.getElementById('now-playing');
 const npDot = document.getElementById('np-dot');
 
-// ─── AUDIO (Karplus-Strong) ──────────────────────────────
+// ─── AUDIO ───────────────────────────────────────────────
 function ensureAudio() {
   if (!audioCtx) {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = volume;
+    masterGain.connect(audioCtx.destination);
   }
-  if (audioCtx.state === 'suspended') audioCtx.resume();
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
 }
 
-const PLUCK_BUFFERS = new Map(); // midi -> AudioBuffer (noise burst)
-
-function getPluckBuffer(midi) {
-  if (PLUCK_BUFFERS.has(midi)) return PLUCK_BUFFERS.get(midi);
-  const len = Math.max(64, Math.floor(SAMPLE_RATE / midiToFreq(midi) * 0.5));
-  const buf = audioCtx.createBuffer(1, len, SAMPLE_RATE);
-  const data = buf.getChannelData(0);
-  for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * 0.5;
-  PLUCK_BUFFERS.set(midi, buf);
-  return buf;
-}
-
-function midiToFreq(m) { return 440 * Math.pow(2, (m - 69) / 12); }
+const midiToFreq = (m) => 440 * Math.pow(2, (m - 69) / 12);
 const midiToName = (m) => ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'][m % 12] + (Math.floor(m / 12) - 1);
 
-let activeVoices = new Map(); // key (stringIdx-fret) -> { source, bufferSource }
+let activeVoices = new Map(); // key -> { osc, gain, filter }
 
 function stopVoice(key) {
   const v = activeVoices.get(key);
   if (!v) return;
-  try { v.source.stop(); v.source.disconnect(); } catch {}
+  try {
+    v.gain.gain.cancelScheduledValues(audioCtx.currentTime);
+    v.gain.gain.setValueAtTime(v.gain.gain.value, audioCtx.currentTime);
+    v.gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.15);
+    v.osc.stop(audioCtx.currentTime + 0.15);
+  } catch {}
   activeVoices.delete(key);
 }
 
@@ -67,52 +61,81 @@ function playNote(stringIdx, fret) {
   const key = `${stringIdx}-${fret}`;
   stopVoice(key); // retrigger same note
 
-  const gain = audioCtx.createGain();
-  const convolver = audioCtx.createConvolver();
-  // tiny body resonance from pluck buffer
-  convolver.buffer = getPluckBuffer(midi);
-
-  const source = audioCtx.createBufferSource();
-  source.buffer = getPluckBuffer(midi);
-  source.playbackRate.value = 1;
-  source.connect(convolver).connect(gain).connect(audioCtx.destination);
-
+  const freq = midiToFreq(midi);
   const now = audioCtx.currentTime;
-  gain.gain.setValueAtTime(volume * 0.6, now);
-  gain.gain.exponentialRampToValueAtTime(0.001, now + 2.5);
-  source.start(now);
 
-  activeVoices.set(key, { source, gain });
+  // Gain for this note
+  const gain = audioCtx.createGain();
+  const peak = 0.35 * volume;
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.exponentialRampToValueAtTime(peak, now + 0.01);
+  gain.gain.exponentialRampToValueAtTime(Math.max(0.08 * volume, 0.001), now + 0.6);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.5);
+
+  // Filter for warmer guitar tone
+  const filter = audioCtx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.value = 2200 + midi * 15;
+  filter.Q.value = 0.7;
+
+  // Fundamental + harmonics (guitar-like)
+  const osc1 = audioCtx.createOscillator();
+  osc1.type = 'sawtooth';
+  osc1.frequency.value = freq;
+
+  const osc2 = audioCtx.createOscillator();
+  osc2.type = 'sawtooth';
+  osc2.frequency.value = freq * 2;
+
+  const osc3 = audioCtx.createOscillator();
+  osc3.type = 'sine';
+  osc3.frequency.value = freq * 3;
+
+  osc1.connect(filter).connect(gain).connect(masterGain);
+  osc2.connect(filter).connect(gain).connect(masterGain);
+  osc3.connect(filter).connect(gain).connect(masterGain);
+
+  osc1.start(now);
+  osc2.start(now);
+  osc3.start(now);
+
+  osc1.stop(now + 2.6);
+  osc2.stop(now + 2.6);
+  osc3.stop(now + 2.6);
+
+  activeVoices.set(key, { osc: osc1, gain, filter });
+  // Also track osc2/osc3 under same key conceptually — they stop together
+
   lightString(stringIdx, true);
   updateNowPlaying(stringIdx, fret, midi);
-  setTimeout(() => lightString(stringIdx, false), 180);
+  setTimeout(() => lightString(stringIdx, false), 200);
 }
 
 function lightString(idx, on) {
   const s = document.querySelectorAll('.string')[idx];
   if (s) s.classList.toggle('active', on);
 }
-function stopAll() { activeVoices.forEach((_, k) => stopVoice(k)); }
+function stopAll() {
+  activeVoices.forEach((_, k) => stopVoice(k));
+}
 
-// ─── FRETBOARD RENDERING ─────────────────────────────────
+// ─── FRETBOARD ───────────────────────────────────────────
 function renderFretboard() {
   fretboardEl.innerHTML = '';
+
   const nut = document.createElement('div');
   nut.className = 'fret nut';
   nut.style.left = '3%';
   fretboardEl.appendChild(nut);
 
-  const firstFretLeft = 7.5;   // % from left where string starts (after nut)
-  const lastFretLeft = 94;     // % at last fret
+  const firstFretLeft = 7.5;
+  const lastFretLeft = 94;
   const span = lastFretLeft - firstFretLeft;
-  // exponential fret placement (rule of 18 approx)
   const fretX = [];
   for (let f = 0; f <= FRETS; f++) {
-    const x = firstFretLeft + span * (1 - Math.pow(2, -f / 12));
-    fretX.push(x);
+    fretX.push(firstFretLeft + span * (1 - Math.pow(2, -f / 12)));
   }
 
-  // Frets
   for (let f = 1; f <= FRETS; f++) {
     const div = document.createElement('div');
     div.className = 'fret';
@@ -128,12 +151,10 @@ function renderFretboard() {
     }
   }
 
-  // Strings (6)
-  const stringCount = STRINGS;
-  const top = 14; // % from top
-  const bottom = 78; // % from top
-  const step = (bottom - top) / (stringCount - 1);
-  for (let i = 0; i < stringCount; i++) {
+  const top = 14;
+  const bottom = 78;
+  const step = (bottom - top) / (STRINGS - 1);
+  for (let i = 0; i < STRINGS; i++) {
     const y = top + i * step;
     const str = document.createElement('div');
     str.className = 'string';
@@ -151,7 +172,6 @@ function tuningName(t) {
 }
 
 function attachStringEvents(el, stringIdx) {
-  // Click / tap to pluck at nearest fret
   const pluck = (clientX) => {
     const rect = fretboardEl.getBoundingClientRect();
     const x = ((clientX - rect.left) / rect.width) * 100;
@@ -159,39 +179,42 @@ function attachStringEvents(el, stringIdx) {
     playNote(stringIdx, fret);
   };
 
-  el.addEventListener('mousedown', (e) => { isStrumming = true; strumStartX = e.clientX; pluck(e.clientX); });
-  el.addEventListener('touchstart', (e) => { e.preventDefault(); isStrumming = true; strumStartX = e.touches[0].clientX; pluck(e.touches[0].clientX); }, { passive: false });
+  let isStrumming = false;
+  let strumStartX = 0;
 
-  // Drag = strum across strings
-  const move = (clientX) => {
+  const start = (cx) => {
+    isStrumming = true;
+    strumStartX = cx;
+    pluck(cx);
+  };
+  const move = (cx) => {
     if (!isStrumming) return;
     const rect = fretboardEl.getBoundingClientRect();
-    const x = ((clientX - rect.left) / rect.width) * 100;
+    const x = ((cx - rect.left) / rect.width) * 100;
     const fret = nearestFret(x);
-    // strum: play adjacent string slightly delayed based on drag direction
-    const dx = clientX - strumStartX;
-    if (Math.abs(dx) > 20) {
-      const dir = dx > 0 ? 1 : -1; // low to high or high to low
+    const dx = cx - strumStartX;
+    if (Math.abs(dx) > 25) {
+      const dir = dx > 0 ? 1 : -1;
       const order = dir > 0 ? [0,1,2,3,4,5] : [5,4,3,2,1,0];
       order.forEach((si, i) => {
-        setTimeout(() => playNote(si, fret), i * 25);
+        setTimeout(() => playNote(si, fret), i * 30);
       });
       isStrumming = false;
     }
   };
   const end = () => { isStrumming = false; };
 
+  el.addEventListener('mousedown', (e) => start(e.clientX));
+  el.addEventListener('touchstart', (e) => { e.preventDefault(); start(e.touches[0].clientX); }, { passive: false });
   document.addEventListener('mousemove', (e) => move(e.clientX));
-  document.addEventListener('mouseup', end);
   document.addEventListener('touchmove', (e) => { e.preventDefault(); move(e.touches[0].clientX); }, { passive: false });
+  document.addEventListener('mouseup', end);
   document.addEventListener('touchend', (e) => { e.preventDefault(); end(); });
 }
 
 function nearestFret(xPercent) {
-  // find fret whose center is closest
-  let best = 0, bestDist = Infinity;
-  // sample fret centers: use fretX from render — approximate here
   const first = 7.5, last = 94, span = last - first;
+  let best = 0, bestDist = Infinity;
   for (let f = 0; f <= FRETS; f++) {
     const x = first + span * (1 - Math.pow(2, -f / 12));
     const d = Math.abs(xPercent - x);
@@ -212,7 +235,10 @@ function setTuning(name) {
   showToast(`🎸 Tuning: ${tuningName(name)}`);
 }
 
-function setVolume(v) { volume = v / 100; }
+function setVolume(v) {
+  volume = v / 100;
+  if (masterGain) masterGain.gain.value = volume;
+}
 
 function toggleFretLabels() {
   fretLabelsOn = !fretLabelsOn;
@@ -225,13 +251,12 @@ function toggleFretLabels() {
 function updateNowPlaying(stringIdx, fret, midi) {
   const stringLabel = ['6th (E)','5th (A)','4th (D)','3rd (G)','2nd (B)','1st (E)'][stringIdx];
   const note = fret === 0 ? 'open ' + stringLabel : `${midiToName(midi)} (fret ${fret})`;
-  document.getElementById('now-playing').innerHTML = `Plucking <strong>${note}</strong>`;
+  nowPlayingEl.innerHTML = `Plucking <strong>${note}</strong>`;
   npDot.classList.add('live');
-  setTimeout(() => npDot.classList.remove('live'), 400);
+  setTimeout(() => npDot.classList.remove('live'), 350);
 }
 
 function showToast(msg) {
-  // reuse toast if exists
   let t = document.getElementById('toast');
   if (!t) {
     t = document.createElement('div');
